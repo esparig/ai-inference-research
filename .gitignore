@@ -25,3 +25,6 @@ Pipfile.lock
 # OS-specific files
 .DS_Store
 Thumbs.db
+
+# uv specifc files
+uv.*
