@@ -1,0 +1,4 @@
+{
+    "name": "doc-sim-model",
+    "implementation": "my_model.MyKulModel"
+}

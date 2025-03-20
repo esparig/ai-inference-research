@@ -1,0 +1,27 @@
+# Virtual environment
+.venv/
+.env/
+.envs/
+.metrics/
+.python-version
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Dependency lock files (optional, if you want to avoid committing them)
+poetry.lock
+Pipfile.lock
+
+# IDE-specific files
+.vscode/
+.idea/
+
+# OS-specific files
+.DS_Store
+Thumbs.db

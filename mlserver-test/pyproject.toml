@@ -1,0 +1,12 @@
+[project]
+name = "mlserver-test"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.9, <3.12"
+dependencies = [
+    "mlserver>=1.6.1",
+    "pip>=25.0.1",
+    "spacy>=3.8.4",
+    "wikipedia-api>=0.8.1",
+]
