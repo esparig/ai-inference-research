@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kserve-config-patcher
+  namespace: kserve
+---
+# Role to read ingress in the oscar namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ingress-reader
+  namespace: oscar
+rules:
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch"]
+---
+# Role to create/update configmap and restart kserve controller in kserve namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kserve-config-writer
+  namespace: kserve
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "create", "update", "patch"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "patch", "update"]
+---
+# Bind ingress-reader role (in oscar ns) to the service account in kserve ns
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: bind-ingress-reader-to-patcher
+  namespace: oscar
+subjects:
+- kind: ServiceAccount
+  name: kserve-config-patcher
+  namespace: kserve
+roleRef:
+  kind: Role
+  name: ingress-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# Bind kserve-config-writer role (in kserve ns) to the same service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: bind-kserve-writer-to-patcher
+  namespace: kserve
+subjects:
+- kind: ServiceAccount
+  name: kserve-config-patcher
+  namespace: kserve
+roleRef:
+  kind: Role
+  name: kserve-config-writer
+  apiGroup: rbac.authorization.k8s.io
+---
+# Job that extracts the host from oscar ingress and applies the inferenceservice-config patch
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kserve-inferenceservice-config-patch
+  namespace: kserve
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      serviceAccountName: kserve-config-patcher
+      restartPolicy: OnFailure
+      containers:
+      - name: patcher
+        image: bitnami/kubectl:latest
+        securityContext:
+          runAsUser: 0
+        command: ["/bin/sh"]
+        args:
+          - -c
+          - |
+            set -euo pipefail
+            
+            echo "Extracting host from oscar ingress..."
+            HOST=$(kubectl -n oscar get ingress oscar -o jsonpath='{.spec.rules[0].host}' 2>/dev/null || true)
+            if [ -z "$HOST" ]; then
+              echo "ERROR: could not determine host from oscar ingress in namespace 'oscar'."
+              kubectl -n oscar get ingress -o yaml
+              exit 1
+            fi
+            echo "Found host: $HOST"
+            
+            kubectl patch configmap inferenceservice-config -n kserve --type merge -p "{\"data\":{\"ingress\":\"{\\\"enableGatewayApi\\\":false,\\\"kserveIngressGateway\\\":\\\"kserve/kserve-ingress-gateway\\\",\\\"ingressGateway\\\":\\\"knative-serving/knative-ingress-gateway\\\",\\\"knativeLocalGatewayService\\\":\\\"\\\",\\\"localGateway\\\":\\\"knative-serving/knative-local-gateway\\\",\\\"localGatewayService\\\":\\\"knative-local-gateway.istio-system.svc.cluster.local\\\",\\\"ingressClassName\\\":\\\"nginx\\\",\\\"ingressDomain\\\":\\\"${HOST}\\\",\\\"additionalIngressDomains\\\":[],\\\"domainTemplate\\\":\\\"{{ .Name }}-{{ .Namespace }}.{{ .IngressDomain }}\\\",\\\"urlScheme\\\":\\\"http\\\",\\\"disableIstioVirtualHost\\\":false,\\\"disableIngressCreation\\\":false}\",\"deploy\":\"{\\\"defaultDeploymentMode\\\":\\\"Serverless\\\"}\"}}"
+            
+            echo "Restarting KServe controller to pick up config..."
+            kubectl -n kserve rollout restart deployment -l app.kubernetes.io/name=kserve-controller || true
+            
+            echo "Patch applied with ingressDomain=${HOST}"
