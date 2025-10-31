@@ -1,0 +1,12 @@
+apiVersion: "serving.kserve.io/v1beta1"
+kind: "InferenceService"
+metadata:
+  name: "pmml-demo"
+  namespace: "kserve-test"
+spec:
+  predictor:
+    minReplicas: 0
+    model:
+      modelFormat:
+        name: pmml
+      storageUri: "gs://kfserving-examples/models/pmml"

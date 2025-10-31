@@ -97,3 +97,6 @@ spec:
             kubectl -n kserve rollout restart deployment -l app.kubernetes.io/name=kserve-controller || true
             
             echo "Patch applied with ingressDomain=${HOST}"
+
+
+#  kubectl patch configmap inferenceservice-config -n kserve --type merge -p "{\"data\":{\"ingress\":\"{\\\"enableGatewayApi\\\":false,\\\"kserveIngressGateway\\\":\\\"kserve/kserve-ingress-gateway\\\",\\\"ingressGateway\\\":\\\"knative-serving/knative-ingress-gateway\\\",\\\"knativeLocalGatewayService\\\":\\\"\\\",\\\"localGateway\\\":\\\"knative-serving/knative-local-gateway\\\",\\\"localGatewayService\\\":\\\"kourier-internal.kourier-system.svc.cluster.local\\\",\\\"ingressClassName\\\":\\\"nginx\\\",\\\"ingressDomain\\\":\\\"${HOST}\\\",\\\"additionalIngressDomains\\\":[],\\\"domainTemplate\\\":\\\"{{ .Name }}-{{ .Namespace }}.{{ .IngressDomain }}\\\",\\\"urlScheme\\\":\\\"http\\\",\\\"disableIstioVirtualHost\\\":false,\\\"disableIngressCreation\\\":false}\",\"deploy\":\"{\\\"defaultDeploymentMode\\\":\\\"RawDeployment\\\"}\"}}"

@@ -23,33 +23,62 @@
 5. **Install KServe Resources & Set the kserve.controller.deploymentMode to RawDeployment and configure the Ingress class**
    ```bash
    k create namespace kserve
+   ```
 
+   ```bash
    helm install kserve oci://ghcr.io/kserve/charts/kserve --version v0.15.0  --namespace kserve --create-namespace --set kserve.controller.deploymentMode=RawDeployment --set kserve.controller.gateway.ingressGateway.className="nginx" --kube-insecure-skip-tls-verify
    ```
 
 6. **Patch inference config**
    ```bash
-   k apply -f /home/esparig/projects/ai-inference-research/kserve-tryout/inference-config-patch-job.yaml
+   k apply -f ./kserve-tryout/kserve-rawdeployment-patch-job.yaml
    ```
 
 7. **Deploy a sample inference service** ([Reference](https://kserve.github.io/archive/0.15/get_started/first_isvc/))
    ```bash
    k create namespace kserve-test
 
-   k apply -n kserve-test -f /home/esparig/projects/ai-inference-research/kserve-tryout/sklearn-iris.yaml
+   k apply -n kserve-test -f ./kserve-tryout/sklearn-iris.yaml
    ```
 
 8. **Perform inference**
    ```bash
-   SERVICE_HOSTNAME=$(k get inferenceservice sklearn-iris -n kserve-test -o jsonpath='{.status.url}' | cut -d "/" -f 3)
+    SERVICE_HOSTNAME=$(kubectl get inferenceservice sklearn-iris -n kserve-test -o jsonpath='{.status.url}' | cut -d'/' -f3)
 
-   curl -v -H "Host: ${SERVICE_HOSTNAME}"      -H "Content-Type: application/json"      http://confident-shtern7.im.grycap.net/v1/models/sklearn-iris:predict      -d @/home/esparig/projects/ai-inference-research/kserve-tryout/iris-input.json
+    # Replace EXTERNAL_HOSTNAME with your cluster's ingress host (e.g. your-ingress.example.com)
+    EXTERNAL_HOSTNAME=${EXTERNAL_HOSTNAME:-"EXTERNAL_HOSTNAME"}
+
+    curl -v \
+       -H "Host: ${SERVICE_HOSTNAME}" \
+       -H "Content-Type: application/json" \
+       "http://${EXTERNAL_HOSTNAME}/v1/models/sklearn-iris:predict" \
+       -d @./kserve-tryout/iris-input.json
    ```
 
 9. **Run performance test**
+
+   Deploy sklearn-iris inference service if not already done:
+
    ```bash
-   k create -f /home/esparig/projects/ai-inference-research/kserve-tryout/perf.yaml -n kserve-test
+   kubectl create -f ./kserve-tryout/sklearn-iris.yaml -n kserve-test
    ```
+
+   Run performance test:
+   
+   ```bash
+   kubectl create -f ./kserve-tryout/perf.yaml -n kserve-test
+   ```
+
+   Get performance test results:
+   
+   ```bash
+   # Find the perf pod first, then show logs
+   kubectl get pods -n kserve-test
+   # Example:
+   # PERF_POD=$(kubectl get pods -n kserve-test -l app=perf -o jsonpath='{.items[0].metadata.name}')
+   # kubectl logs "${PERF_POD}" -n kserve-test
+   ```
+
 
 **Performance Test Results**
 
