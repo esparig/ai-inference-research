@@ -30,6 +30,9 @@
    ```
 
 6. **Patch inference config**
+
+   Review ingressdomain in kserve-tryout/kserve-rawdeployment-patch-job.yaml and modify if needed. By default would be the same domain as the one used in the OSCAR cluster.
+
    ```bash
    k apply -f ./kserve-tryout/kserve-rawdeployment-patch-job.yaml
    ```

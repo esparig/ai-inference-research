@@ -1,0 +1,171 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: opt-125
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: huggingface
+      args:
+        - --model_name=opt-125
+        - --model_id=facebook/opt-125m
+      image: kserve/huggingfaceserver:v0.15.0
+      env:
+        - name: VLLM_CPU_KVCACHE_SPACE
+          value: "1"
+      resources:
+        requests:
+          cpu: "1"
+          memory: "2Gi"
+        limits:
+          cpu: "1"
+          memory: "2Gi"
+
+# Request KServe RawDeployment::
+#
+# curl -v "http://129.114.25.90:80/openai/v1/completions" \
+#  -H "content-type: application/json" \
+#  -H "Host: opt-125-default.confident-shtern7.alu.cursocloudaws.net" \
+#  -d '{
+#    "model": "opt-125",
+#    "prompt": "One thing about Denver is ",
+#    "stream": false,
+#    "max_tokens": 30,
+#    "stop": "."
+#  }'
+
+# Response:
+#
+# {
+#   "id": "cmpl-e9e2a8ff5da2033669595806e1e1937f",
+#   "object": "text_completion",
+#   "created": 1762257066,
+#   "model": "opt-125",
+#   "choices": [
+#     {
+#       "index": 0,
+#       "text": " that their only 2 occurrences since 2005 were Big 3, which often means a good majority of teams of his length aren’t playing here where he",
+#       "logprobs": null,
+#       "finish_reason": "length",
+#       "stop_reason": null,
+#       "prompt_logprobs": null
+#     }
+#   ],
+#   "usage": {
+#     "prompt_tokens": 7,
+#     "total_tokens": 37,
+#     "completion_tokens": 30,
+#     "prompt_tokens_details": null
+#   }
+# }
+
+# Resource snapshot for the `opt-125` InferenceService  over a KServe in RawDeployment mode — shows pods, service, deployment, replicaSet and HPA.
+# Run:
+#
+# kubectl get all -n default -l serving.kserve.io/inferenceservice=opt-125
+# NAME                                     READY   STATUS    RESTARTS   AGE
+# pod/opt-125-predictor-7d9f946bbd-b2gqc   1/1     Running   0          43m
+#
+# NAME                        TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+# service/opt-125-predictor   ClusterIP   10.96.190.149   <none>        80/TCP    43m
+#
+# NAME                                READY   UP-TO-DATE   AVAILABLE   AGE
+# deployment.apps/opt-125-predictor   1/1     1            1           43m
+#
+# NAME                                           DESIRED   CURRENT   READY   AGE
+# replicaset.apps/opt-125-predictor-7d9f946bbd   1         1         1       43m
+#
+# NAME                                                    REFERENCE                      TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+# horizontalpodautoscaler.autoscaling/opt-125-predictor   Deployment/opt-125-predictor   cpu: 2%/80%   1         1         1          43m
+
+# k1 get ingress opt-125
+# NAME      CLASS   HOSTS                                                                                                                       ADDRESS         PORTS   AGE
+# opt-125   nginx   opt-125-default.confident-shtern7.alu.cursocloudaws.net,opt-125-predictor-default.confident-shtern7.alu.cursocloudaws.net   10.108.97.214   80      128m
+
+## Example request/response (KServe Serverless)
+#
+# This block shows a sample curl request sent to a KServe Serverless (Knative/Kourier) route
+# and the corresponding curl verbose output followed by the JSON completion returned by the model.
+# Replace EXTERNAL_HOST and KOURIER_NODE_IP/PORT with your cluster values when reproducing.
+#
+# curl -v -H "Host: opt-125-predictor.default.wonderful-bartik0.alu.cursocloudaws.net" \
+#      -H "Content-Type: application/json" \
+#      http://129.114.27.7:10926/openai/v1/completions \
+#      -d '{
+#        "model": "opt-125",
+#        "prompt": "One thing about Denver is ",
+#        "stream": false,
+#        "max_tokens": 30,
+#        "stop": "."
+#      }'
+#
+# *   Trying 129.114.27.7:10926...
+# * Connected to 129.114.27.7 (129.114.27.7) port 10926 (#0)
+# > POST /openai/v1/completions HTTP/1.1
+# > Host: opt-125-predictor.default.wonderful-bartik0.alu.cursocloudaws.net
+# > User-Agent: curl/7.81.0
+# > Accept: */*
+# > Content-Type: application/json
+# > Content-Length: 150
+# 
+# * Mark bundle as not supporting multiuse
+# < HTTP/1.1 200 OK
+# < content-length: 461
+# < content-type: application/json
+# < date: Tue, 04 Nov 2025 13:07:26 GMT
+# < server: envoy
+# < x-envoy-upstream-service-time: 3376
+# 
+# * Connection #0 to host 129.114.27.7 left intact
+# {
+#   "id": "cmpl-45ff8f3c-a5ac-4abd-8d6c-64dde2dec0ba",
+#   "object": "text_completion",
+#   "created": 1762261647,
+#   "model": "opt-125",
+#   "choices": [
+#     {
+#       "index": 0,
+#       "text": " you get to see dolphins mopping up hamburgers all over, venison amazingly pressed cheese that shot up in chain restaurants I went to",
+#       "logprobs": null,
+#       "finish_reason": "stop",
+#       "stop_reason": ".",
+#       "prompt_logprobs": null
+#     }
+#   ],
+#   "usage": {
+#     "prompt_tokens": 7,
+#     "total_tokens": 36,
+#     "completion_tokens": 29,
+#     "prompt_tokens_details": null
+#   }
+# }
+
+# Resource snapshot for the `opt-125` InferenceService  over a KServe in Serverless mode — shows pods, service, revision, configuration, route and HPA.
+# # Run:
+# kubectl get all -n default -l serving.kserve.io/inferenceservice=opt-125
+# NAME                                                      READY   STATUS    RESTARTS   AGE
+# pod/opt-125-predictor-00001-deployment-86d7fbbb48-dfvpq   2/2     Running   0          65m
+
+# NAME                                      TYPE           CLUSTER-IP      EXTERNAL-IP                                         PORT(S)                                              AGE
+# service/opt-125-predictor                 ExternalName   <none>          kourier-internal.kourier-system.svc.cluster.local   80/TCP                                               64m
+# service/opt-125-predictor-00001           ClusterIP      10.104.171.51   <none>                                              80/TCP,443/TCP                                       65m
+# service/opt-125-predictor-00001-private   ClusterIP      10.102.45.137   <none>                                              80/TCP,443/TCP,9090/TCP,9091/TCP,8022/TCP,8012/TCP   65m
+
+# NAME                                                 READY   UP-TO-DATE   AVAILABLE   AGE
+# deployment.apps/opt-125-predictor-00001-deployment   1/1     1            1           65m
+
+# NAME                                                            DESIRED   CURRENT   READY   AGE
+# replicaset.apps/opt-125-predictor-00001-deployment-86d7fbbb48   1         1         1       65m
+
+# NAME                                                  LATESTCREATED             LATESTREADY               READY   REASON
+# configuration.serving.knative.dev/opt-125-predictor   opt-125-predictor-00001   opt-125-predictor-00001   True    
+
+# NAME                                                   CONFIG NAME         GENERATION   READY   REASON   ACTUAL REPLICAS   DESIRED REPLICAS
+# revision.serving.knative.dev/opt-125-predictor-00001   opt-125-predictor   1            True             1                 1
+
+# NAME                                          URL                                                                        READY   REASON
+# route.serving.knative.dev/opt-125-predictor   http://opt-125-predictor.default.wonderful-bartik0.alu.cursocloudaws.net   True    
+
+# NAME                                            URL                                                                        LATESTCREATED             LATESTREADY               READY   REASON
+# service.serving.knative.dev/opt-125-predictor   http://opt-125-predictor.default.wonderful-bartik0.alu.cursocloudaws.net   opt-125-predictor-00001   opt-125-predictor-00001   True    
